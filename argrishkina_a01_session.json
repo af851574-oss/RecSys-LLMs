@@ -1,0 +1,395 @@
+{
+  "format": "privacy-redacted-audit-v1",
+  "notice": "Derived audit, not an unmodified Pi export. Conversational messages are intentionally excluded; local account identifiers are replaced with a.r.grishkina.",
+  "toolCalls": [
+    {
+      "sequence": 1,
+      "tool": "bash",
+      "arguments": {
+        "command": "pwd && find . -maxdepth 3 -type f -print | sort && git status --short",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 2,
+      "tool": "bash",
+      "arguments": {
+        "command": "pdfinfo audit-material/homework_guidelines.pdf && printf '\\n--- SAMPLE ---\\n' && pdfinfo audit-material/sample_homework.pdf && printf '\\n--- REPORT ---\\n' && pdfinfo argrishkina_a01_report.pdf",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 3,
+      "tool": "bash",
+      "arguments": {
+        "command": "for f in README.md week1/index.html week1/test.mjs week1/prompt.md week1/report.md; do echo \"===== $f =====\"; wc -l -c \"$f\"; done",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 4,
+      "tool": "bash",
+      "arguments": {
+        "command": "pdftotext -layout audit-material/homework_guidelines.pdf /tmp/llm4rec-homework-guidelines.txt && wc -l -c /tmp/llm4rec-homework-guidelines.txt",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 5,
+      "tool": "bash",
+      "arguments": {
+        "command": "pdftotext -layout audit-material/sample_homework.pdf /tmp/llm4rec-sample-homework.txt && wc -l -c /tmp/llm4rec-sample-homework.txt",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 6,
+      "tool": "bash",
+      "arguments": {
+        "command": "pdftotext -layout argrishkina_a01_report.pdf /tmp/argrishkina-a01-report.txt && wc -l -c /tmp/argrishkina-a01-report.txt",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 7,
+      "tool": "read",
+      "arguments": {
+        "path": "README.md"
+      }
+    },
+    {
+      "sequence": 8,
+      "tool": "read",
+      "arguments": {
+        "path": "week1/index.html"
+      }
+    },
+    {
+      "sequence": 9,
+      "tool": "read",
+      "arguments": {
+        "path": "week1/test.mjs"
+      }
+    },
+    {
+      "sequence": 10,
+      "tool": "read",
+      "arguments": {
+        "path": "week1/prompt.md"
+      }
+    },
+    {
+      "sequence": 11,
+      "tool": "read",
+      "arguments": {
+        "path": "week1/report.md"
+      }
+    },
+    {
+      "sequence": 12,
+      "tool": "read",
+      "arguments": {
+        "path": "/tmp/llm4rec-homework-guidelines.txt",
+        "offset": 1,
+        "limit": 600
+      }
+    },
+    {
+      "sequence": 13,
+      "tool": "read",
+      "arguments": {
+        "path": "/tmp/llm4rec-sample-homework.txt",
+        "offset": 1,
+        "limit": 300
+      }
+    },
+    {
+      "sequence": 14,
+      "tool": "read",
+      "arguments": {
+        "path": "/tmp/argrishkina-a01-report.txt",
+        "offset": 1,
+        "limit": 200
+      }
+    },
+    {
+      "sequence": 15,
+      "tool": "bash",
+      "arguments": {
+        "command": "git log -1 --format='%H%n%ad%n%s' --date=iso-strict && git remote -v && git branch --show-current",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 16,
+      "tool": "bash",
+      "arguments": {
+        "command": "node week1/test.mjs; printf 'exit=%s\\n' \"$?\"; node --version",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 17,
+      "tool": "bash",
+      "arguments": {
+        "command": "python3 - <<'PY'\nfrom pathlib import Path\nimport re\ns=Path('week1/index.html').read_text()\nscripts=re.findall(r'<script(?:\\s[^>]*)?>(.*?)</script>',s,re.S|re.I)\nassert len(scripts)==1, len(scripts)\nPath('/tmp/week1-inline.js').write_text(scripts[0])\nprint(f'extracted_scripts={len(scripts)} bytes={len(scripts[0].encode())}')\nPY\nnode --check /tmp/week1-inline.js; printf 'node_check_exit=%s\\n' \"$?\"",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 18,
+      "tool": "bash",
+      "arguments": {
+        "command": "for c in 'google-chrome --version' 'chromium --version' 'chromium-browser --version' '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --version'; do echo \"> $c\"; eval \"$c\" 2>&1 && break; done",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 19,
+      "tool": "bash",
+      "arguments": {
+        "command": "curl -fsSL --retry 2 'https://raw.githubusercontent.com/dryjins/RecSys-LLMs/d8a178a50b1997cd0a5e25604be684b0179418db/week1/index.html' -o /tmp/upstream-index.html && curl -fsSL --retry 2 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css' -o /tmp/fa-6.4.0-all.min.css && printf 'upstream '; wc -c /tmp/upstream-index.html; printf 'css '; wc -c /tmp/fa-6.4.0-all.min.css; shasum -a 256 /tmp/upstream-index.html /tmp/fa-6.4.0-all.min.css",
+        "timeout": 60
+      }
+    },
+    {
+      "sequence": 20,
+      "tool": "read",
+      "arguments": {
+        "path": "/tmp/upstream-index.html",
+        "offset": 1,
+        "limit": 240
+      }
+    },
+    {
+      "sequence": 21,
+      "tool": "bash",
+      "arguments": {
+        "command": "ls -ld /Applications/*Chrome* 2>/dev/null || true; find /Applications -maxdepth 3 -type f \\( -name 'Google Chrome' -o -name 'Chromium' \\) -print 2>/dev/null | head -20; find node_modules -maxdepth 3 -type f \\( -name chromium -o -name chrome \\) -print 2>/dev/null | head -20",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 22,
+      "tool": "bash",
+      "arguments": {
+        "command": "python3 - <<'PY'\nfrom pathlib import Path\nimport re\nhtml=Path('/tmp/upstream-index.html').read_text()\ncss=Path('/tmp/fa-6.4.0-all.min.css').read_text()\nprint('stylesheets:')\nfor x in re.findall(r'<link[^>]+href=[\"\\']([^\"\\']+)', html, re.I): print(x)\n# literal configured icon values\nitems=re.findall(r'\\{\\s*name:\\s*[\"\\']([^\"\\']+)[\"\\']\\s*,\\s*icon:\\s*[\"\\']([^\"\\']+)[\"\\']\\s*\\}',html)\nprint('items=',len(items))\npresent=missing=0\nfor name, classes in items:\n    icon=next((c for c in classes.split() if c.startswith('fa-') and c not in {'fa-solid','fa-regular','fa-brands'}),None)\n    # CSS selector can be followed by comma or :before\n    hit=bool(icon and re.search(r'\\.'+re.escape(icon)+r'(?=[:,.{\\s])',css))\n    print(f'{name:10} {classes:30} selector={\"present\" if hit else \"MISSING\"}')\n    present += hit; missing += not hit\nprint(f'count total={len(items)} present={present} missing={missing}')\nPY",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 23,
+      "tool": "bash",
+      "arguments": {
+        "command": "date -u '+%Y-%m-%dT%H:%M:%SZ'; '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --version",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 24,
+      "tool": "bash",
+      "arguments": {
+        "command": "python3 - <<'PY'\nimport re\nfrom pathlib import Path\ns=Path('week1/report.md').read_text()\nurls=re.findall(r'https?://[^\\s)]+',s)\nfor u in urls: print(u.rstrip('.,'))\nprint('count',len(urls))\nPY",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 25,
+      "tool": "bash",
+      "arguments": {
+        "command": "url='https://af851574-oss.github.io/RecSys-LLMs/week1/'; curl -fsSL --retry 2 -D /tmp/live-headers.txt \"$url\" -o /tmp/live-index.html; rc=$?; echo curl_exit=$rc; grep -Ei '^(HTTP/|content-type:|content-length:|last-modified:|etag:)' /tmp/live-headers.txt; echo 'hashes:'; shasum -a 256 week1/index.html /tmp/live-index.html; echo 'titles:'; grep -o '<title>[^<]*</title>' /tmp/live-index.html; echo 'live bytes:'; wc -c /tmp/live-index.html",
+        "timeout": 60
+      }
+    },
+    {
+      "sequence": 26,
+      "tool": "bash",
+      "arguments": {
+        "command": "python3 - <<'PY'\nimport re, subprocess\nfrom pathlib import Path\ns=Path('week1/report.md').read_text()\nurls=[]\nfor u in re.findall(r'https?://[^\\s)]+',s):\n    u=u.rstrip('.,')\n    if u not in urls: urls.append(u)\nfor u in urls:\n    p=subprocess.run(['curl','-L','--retry','2','--connect-timeout','15','--max-time','60','-sS','-o','/dev/null','-w','%{http_code}\\t%{url_effective}\\t%{content_type}',u],text=True,capture_output=True)\n    print(f'exit={p.returncode}\\t{p.stdout}\\t{u}')\n    if p.stderr: print('stderr='+p.stderr.strip())\nPY",
+        "timeout": 180
+      }
+    },
+    {
+      "sequence": 27,
+      "tool": "bash",
+      "arguments": {
+        "command": "rm -f /tmp/a01-page-*.png; pdftoppm -png -r 120 argrishkina_a01_report.pdf /tmp/a01-page >/dev/null 2>&1; ls -lh /tmp/a01-page-*.png; pdfimages -list argrishkina_a01_report.pdf",
+        "timeout": 60
+      }
+    },
+    {
+      "sequence": 28,
+      "tool": "bash",
+      "arguments": {
+        "command": "pdfdetach -list argrishkina_a01_report.pdf; printf '\\nfonts:\\n'; pdffonts argrishkina_a01_report.pdf; printf '\\nlinks detected by pdftotext URLs:\\n'; grep -Eo 'https?://[^ ]+' /tmp/argrishkina-a01-report.txt | wc -l",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 29,
+      "tool": "bash",
+      "arguments": {
+        "command": "git show HEAD:week1/index.html >/tmp/head-index.html && git show HEAD:week1/report.md >/tmp/head-report.md && printf 'working vs HEAD hashes\\n'; shasum -a 256 week1/index.html /tmp/head-index.html week1/report.md /tmp/head-report.md argrishkina_a01_report.pdf; printf '\\nstatus\\n'; git status --short",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 30,
+      "tool": "read",
+      "arguments": {
+        "path": "/tmp/a01-page-1.png"
+      }
+    },
+    {
+      "sequence": 31,
+      "tool": "read",
+      "arguments": {
+        "path": "/tmp/a01-page-2.png"
+      }
+    },
+    {
+      "sequence": 32,
+      "tool": "bash",
+      "arguments": {
+        "command": "set -u\npython3 -m http.server 8765 --directory . >/tmp/a01-http.log 2>&1 & pid=$!\ntrap 'kill $pid 2>/dev/null || true' EXIT\nsleep 1\ncode=$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/week1/)\necho local_http=$code\nrm -rf /tmp/chrome-a01-local\n'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --headless --disable-gpu --no-sandbox --user-data-dir=/tmp/chrome-a01-local --virtual-time-budget=1500 --dump-dom http://127.0.0.1:8765/week1/ >/tmp/local-dom.html 2>/tmp/local-chrome.err\nrc=$?\necho chrome_exit=$rc\npython3 - <<'PY'\nfrom pathlib import Path\nimport re\ns=Path('/tmp/local-dom.html').read_text()\nfor cls in ('food-icon','food-name'):\n m=re.search(rf'<div class=\"{cls}[^\"]*\"[^>]*>(.*?)</div>',s,re.S)\n print(cls+'='+re.sub('<[^>]*>','',m.group(1)).strip() if m else cls+'=NOT_FOUND')\nPY\nif [ -s /tmp/local-chrome.err ]; then echo stderr_tail:; tail -5 /tmp/local-chrome.err; fi",
+        "timeout": 60
+      }
+    },
+    {
+      "sequence": 33,
+      "tool": "bash",
+      "arguments": {
+        "command": "rm -rf /tmp/chrome-a01-live\n'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --headless --disable-gpu --no-sandbox --user-data-dir=/tmp/chrome-a01-live --virtual-time-budget=1500 --dump-dom 'https://af851574-oss.github.io/RecSys-LLMs/week1/' >/tmp/live-dom.html 2>/tmp/live-chrome.err\nrc=$?\necho chrome_exit=$rc\npython3 - <<'PY'\nfrom pathlib import Path\nimport re\ns=Path('/tmp/live-dom.html').read_text()\nprint('title='+re.search(r'<title>(.*?)</title>',s,re.S).group(1))\nfor cls in ('food-icon','food-name'):\n m=re.search(rf'<div class=\"{cls}[^\"]*\"[^>]*>(.*?)</div>',s,re.S)\n print(cls+'='+re.sub('<[^>]*>','',m.group(1)).strip() if m else cls+'=NOT_FOUND')\nPY\nif [ -s /tmp/live-chrome.err ]; then echo stderr_tail:; tail -5 /tmp/live-chrome.err; fi",
+        "timeout": 60
+      }
+    },
+    {
+      "sequence": 34,
+      "tool": "bash",
+      "arguments": {
+        "command": "python3 - <<'PY'\nfrom pathlib import Path\nimport re\nfor f in ['week1/report.md','/tmp/argrishkina-a01-report.txt','/tmp/llm4rec-sample-homework.txt']:\n s=Path(f).read_text()\n print('\\n'+f)\n for pat in [r'^\\s*Student:.*$',r'^\\s*Team:.*$',r'^\\s*Email:.*$',r'^\\s*Date:.*$',r'^\\s*Assignment:.*$',r'^\\s*(?:##\\s*)?(?:[1-6]\\.\\s*)?(Abstract|Index Terms|Introduction|Related Work|Method|Experiments|Discussion|AI Usage Disclosure|References)\\s*$']:\n  ms=re.findall(pat,s,re.M|re.I)\n  print(pat, ms)\nPY",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 35,
+      "tool": "bash",
+      "arguments": {
+        "command": "echo 'local files:'; ls -l /tmp/local-dom.html /tmp/local-chrome.err 2>/dev/null || true; python3 - <<'PY'\nfrom pathlib import Path\nimport re\np=Path('/tmp/local-dom.html')\nif p.exists():\n s=p.read_text()\n t=re.search(r'<title>(.*?)</title>',s,re.S); print('title='+(t.group(1) if t else 'NOT_FOUND'))\n for cls in ('food-icon','food-name'):\n  m=re.search(rf'<div class=\"{cls}[^\"]*\"[^>]*>(.*?)</div>',s,re.S)\n  print(cls+'='+re.sub('<[^>]*>','',m.group(1)).strip() if m else cls+'=NOT_FOUND')\nPY\nprintf 'http log:\\n'; tail -10 /tmp/a01-http.log 2>/dev/null || true; printf 'chrome err tail:\\n'; tail -10 /tmp/local-chrome.err 2>/dev/null || true",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 36,
+      "tool": "bash",
+      "arguments": {
+        "command": "pgrep -af 'chrome-a01|http.server 8765' || true",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 37,
+      "tool": "bash",
+      "arguments": {
+        "command": "python3 - <<'PY'\nfrom pathlib import Path\nimport re\nfor f in ['week1/report.md']:\n s=Path(f).read_text()\n print('markdown metadata:')\n for key in ('Student','Team','Email','Date','Assignment'):\n  m=re.search(rf'^\\*\\*{key}:\\*\\*\\s*(.*)$',s,re.M)\n  print(f'{key}: '+(m.group(1) if m else 'MISSING'))\n # basic abstract word/sentence counts\n a=re.search(r'^## Abstract\\n\\n(.*?)\\n\\n',s,re.S|re.M).group(1)\n print('abstract_words=',len(re.findall(r\"\\b[\\w’-]+\\b\",a)))\n print('abstract_sentence_endings=',len(re.findall(r'[.!?](?:\\s|$)',a)))\nPY",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 38,
+      "tool": "bash",
+      "arguments": {
+        "command": "command -v qpdf || true; command -v mutool || true; command -v pdfannots || true; command -v exiftool || true",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 39,
+      "tool": "bash",
+      "arguments": {
+        "command": "git status --short && git diff --stat",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 40,
+      "tool": "bash",
+      "arguments": {
+        "command": "python3 - <<'PY'\nfrom pathlib import Path\nimport re\nr=Path('/tmp/argrishkina-a01-report.txt').read_text()\ns=Path('/tmp/llm4rec-sample-homework.txt').read_text()\ndef sections(t):\n out=[]\n for line in t.splitlines():\n  v=line.strip()\n  if v in ['Abstract','References'] or re.fullmatch(r'[1-6]\\. (Introduc on|Related Work|Method|Experiments|Discussion|AI Usage Disclosure)',v): out.append(v)\n return out\nprint('report sections:',sections(r))\nprint('sample sections:',sections(s))\nprint('report student:',re.search(r'^\\s*Student:.*$',r,re.M).group(0).strip())\nprint('sample student:',re.search(r'^\\s*Student:.*$',s,re.M).group(0).strip())\nPY",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 41,
+      "tool": "bash",
+      "arguments": {
+        "command": "curl -fsSL 'https://api.github.com/repos/dryjins/RecSys-LLMs/commits/d8a178a50b1997cd0a5e25604be684b0179418db' -o /tmp/upstream-commit.json && python3 - <<'PY'\nimport json\nj=json.load(open('/tmp/upstream-commit.json'))\nprint('sha='+j['sha'])\nprint('author_name='+j['commit']['author']['name'])\nprint('author_date='+j['commit']['author']['date'])\nprint('committer_name='+j['commit']['committer']['name'])\nprint('message='+j['commit']['message'].splitlines()[0])\nPY",
+        "timeout": 60
+      }
+    },
+    {
+      "sequence": 42,
+      "tool": "bash",
+      "arguments": {
+        "command": "python3 -m http.server 18765 --bind 127.0.0.1 --directory . >/tmp/a01-http-18765.log 2>&1 & pid=$!; sleep 1; curl -sS -o /tmp/local-18765-index.html -w 'http=%{http_code} bytes=%{size_download}\\n' http://127.0.0.1:18765/week1/; kill $pid; wait $pid 2>/dev/null || true; shasum -a 256 week1/index.html /tmp/local-18765-index.html; tail -1 /tmp/a01-http-18765.log",
+        "timeout": 30
+      }
+    },
+    {
+      "sequence": 43,
+      "tool": "bash",
+      "arguments": {
+        "command": "python3 - <<'PY'\nfrom pathlib import Path\nimport re\nfor fn in ['/tmp/argrishkina-a01-report.txt','/tmp/llm4rec-sample-homework.txt']:\n s=Path(fn).read_text()\n print(fn)\n print([m.group(1) for m in re.finditer(r'^\\s*(?:([1-6])\\.\\s+)?(Abstract|Introduc(?:tion| on)|Related Work|Method|Experiments|Discussion|AI Usage Disclosure|References)\\s*$',s,re.M) ])\nPY",
+        "timeout": 30
+      }
+    }
+  ],
+  "fileModifications": [
+    {
+      "file": "week1/index.html",
+      "change": "Replaced unsupported Font Awesome food classes with native emoji; rendered symbols with textContent; removed the external icon dependency."
+    },
+    {
+      "file": "week1/test.mjs",
+      "change": "Added a dependency-free regression check for all 12 menu entries."
+    },
+    {
+      "file": "week1/prompt.md",
+      "change": "Recorded BUILD, ASK WHY, TEST, EXPLAIN, IMPROVE, and FINAL REVIEW prompts plus verified outcomes."
+    },
+    {
+      "file": "week1/report.md",
+      "change": "Aligned the report with the official sample and disclosed this privacy-redacted audit."
+    },
+    {
+      "file": "argrishkina_a01_report.pdf",
+      "change": "Regenerated the two-page PDF from week1/report.md."
+    }
+  ],
+  "keyMilestones": [
+    {
+      "milestone": "Baseline reproduced",
+      "evidence": "12 configured classes; 9 present and 3 absent in Font Awesome 6.4.0: fa-bowl-hot, fa-pasta, fa-bowl."
+    },
+    {
+      "milestone": "Fix verified",
+      "evidence": "node week1/test.mjs passed for 12/12 native symbols; inline JavaScript syntax check passed."
+    },
+    {
+      "milestone": "Local app verified",
+      "evidence": "GET /week1/ returned HTTP 200 and matched the local index.html bytes."
+    },
+    {
+      "milestone": "References verified",
+      "evidence": "All six distinct report/live URLs returned HTTP 200 during the clean final validation."
+    },
+    {
+      "milestone": "Deployment verified",
+      "evidence": "GitHub Pages returned HTTP 200; deployed index.html matched local bytes; Chrome rendered Sushi with 🍣."
+    },
+    {
+      "milestone": "Report verified",
+      "evidence": "PDF is A4, two pages, readable, and contains Student: Anna Grishkina and all required sections."
+    }
+  ]
+}
