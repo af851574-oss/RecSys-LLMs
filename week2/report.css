@@ -1,0 +1,8 @@
+@page { size: A4; margin: 14mm; }
+body { max-width: none; margin: 0; color: #111; font: 9.5pt/1.28 Arial, sans-serif; }
+h1 { margin: 0 0 4pt; font-size: 16pt; text-align: center; }
+h2 { margin: 7pt 0 3pt; font-size: 11pt; break-after: avoid; }
+p { margin: 3pt 0; text-align: justify; }
+table { width: 100%; border-collapse: collapse; margin: 5pt 0; font-size: 9pt; }
+th, td { border: 1px solid #777; padding: 2pt 4pt; }
+ol { margin: 3pt 0 3pt 18pt; padding: 0; }
