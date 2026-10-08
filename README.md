@@ -57,3 +57,32 @@ Run the checks:
 node week3/test.mjs      # parses, math and Top-5 invariants
 node week3/analysis.mjs  # RMSE/MAE/coverage table, Top-5 with/without support, cold start
 ```
+
+## Week 4 — Association Rules on the Online Retail Baskets
+
+Apriori association-rule mining on the UCI Online Retail dataset cleaned to
+17,080 baskets / 3,653 items: the seven `TODO(hw4)` stubs in `week4/script.js`
+are implemented (`dedupeBasket`, `countItemset`, `computeSupport`,
+`computeConfidence`, `computeLift`, `findFrequentItemsets`, `generateRules`),
+leaving the starter's scaffolding untouched. `findFrequentItemsets` is a
+level-wise Apriori (prefix-join candidate generation, downward-closure
+pruning, counting through the shared inverted index); `generateRules` splits
+every frequent itemset both ways (`A → B` and `B → A`) and keeps rules with
+confidence ≥ the slider, so the table, the detail panel and the “Reverse
+direction (B → A)” button all agree that confidence flips while lift does not.
+At the default 1% support / 50% confidence it mines 1,219 frequent itemsets and
+456 rules in ~1.3 s; the slider minimum (0.5%) still finishes in ~3.5 s.
+
+- Live app: https://af851574-oss.github.io/RecSys-LLMs/week4/
+- Prompt journal: [`week4/prompt.md`](week4/prompt.md)
+
+Run the checks:
+
+```bash
+node week4/test.mjs      # starter harness (11/11), lecture examples, thresholds, lift symmetry, hand-computed rule
+node week4/analysis.mjs  # threshold sweep, final rule table, useful vs misleading candidates, basket sizes
+```
+
+Both load the real `week4/transactions.js` and the real `week4/script.js` in a
+`node:vm` sandbox (no dependencies, no server); the page itself opens from
+`file://`.
