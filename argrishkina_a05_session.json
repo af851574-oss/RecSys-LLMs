@@ -535,7 +535,7 @@
   "fileModifications": [
     {
       "file": "week5/script.js",
-      "change": "Worker implemented six TODO(hw5) stubs using TensorFlow.js. Independent review later fixed repeated-Train history, checkpoint tie-break, strict training-set candidate ranking for Recall, and one inconsistent starter harness fixture; those parent edits are outside these worker tool calls, and were verified by the follow-up run."
+      "change": "Worker implemented six TODO(hw5) stubs using TensorFlow.js. Independent review later fixed repeated-Train history, checkpoint tie-break, strict training-set candidate ranking for Recall, and one inconsistent starter harness fixture; those parent edits are outside these worker tool calls and were verified by the follow-up run. A later parent-only UI copy change removed misleading TODO messages without changing model logic."
     },
     {
       "file": "week5/prompt.md",

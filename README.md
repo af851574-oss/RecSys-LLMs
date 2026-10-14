@@ -92,8 +92,9 @@ Both load the real `week4/transactions.js` and the real `week4/script.js` in a
 The six `TODO(hw5)` stubs in `week5/script.js` are implemented
 (`predictRating`, `initializeFactors`, `trainMF`, `selectBestCheckpoint`,
 `recommendTopK`, `recallAtK`). The starter's inconsistent rank-11 test fixture
-was also corrected to use 12 training-set movie candidates; all other
-scaffolding and dataset files are unchanged.
+was also corrected to use 12 training-set movie candidates. The outdated
+"Implement TODO(hw5)" messages were removed after implementation; dataset,
+`index.html`, `style.css` and the instructor readme remain unchanged.
 The model is `mu + p_u . q_i` with 16-dimensional `tf.Variable` factors
 indexed by raw id (`[944, 16]` users, `[1683, 16]` movies); scalar rating
 predictions are clamped to [1, 5], while Top-10 ranking scores are raw and

@@ -6,7 +6,7 @@ The starting point is the HW5 starter in `week5/`: a MovieLens-100k page
 `trainMF`, `selectBestCheckpoint`, `recommendTopK`, `recallAtK`). Everything
 else — TF.js bootstrap (`initTf`), the shared metrics (`computeRMSEFor`,
 `computeBaselineRMSE`), the renderers, the hyper-parameter reader, the
-pipeline wrapper and the 11-check harness — came from the starter. The one inconsistent rank-11 harness fixture needed a minimal correction (see §2); all data files and the UI remain untouched.
+pipeline wrapper and the 11-check harness — came from the starter. The inconsistent rank-11 fixture needed a minimal correction (see §2). Dataset, page structure and CSS remain untouched; after implementation I replaced stale TODO instructions in user-facing `script.js` messages.
 
 All commands below were actually run on this machine (macOS, headless
 Chrome **155.0.8059.41** driven over CDP — version read from
@@ -273,3 +273,8 @@ are corrected here rather than silently rewritten:
 5. **Default hyperparameters.** The journal previously implied the default
    reg 0.05 run was merely weak; it is degenerate (model ≡ mean predictor,
    test RMSE equals the baseline). Any live demo must set reg = 0.0001.
+6. **Stale starter UI copy.** After implementation, the ready status and
+   empty training curve still instructed visitors to implement `TODO(hw5)`.
+   Only those outdated messages and matching error text were replaced; no
+   training, test, or data logic changed. Before Train, the page now asks
+   for L2 = 0.0001 and Train; after Train, it renders the epoch table.

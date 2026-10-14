@@ -837,7 +837,7 @@ function renderTrainingCurve(container) {
   if (!target) return;
   if (!trainingHistory || trainingHistory.length === 0) {
     target.innerHTML =
-      '<p class="empty-state">No training history yet. Implement the <code>TODO(hw5)</code> functions and press &ldquo;Train&rdquo;.</p>';
+      '<p class="empty-state">No training history yet. Set L2 regularization to 0.0001 and press &ldquo;Train&rdquo;.</p>';
     return;
   }
   let bestIndex = 0;
@@ -891,7 +891,7 @@ function renderTopK(userId, container) {
         .join("") +
       "</ol>";
   } catch (error) {
-    target.innerHTML = `<p class="empty-state">Recommendations unavailable — implement the <code>TODO(hw5)</code> functions. <code>${escapeHtml(error.message)}</code></p>`;
+    target.innerHTML = `<p class="empty-state">Recommendations unavailable: <code>${escapeHtml(error.message)}</code></p>`;
   }
 }
 
@@ -926,7 +926,7 @@ function renderRecall(K = 10, container) {
       </table>
       <p class="hint">Excluded: ${result.excluded.unseenIds.length} unseen relevant test item(s); ${result.excluded.usersWithoutRelevant.length} user(s) without a relevant candidate.</p>`;
   } catch (error) {
-    target.innerHTML = `<p class="empty-state">Recall unavailable — implement the <code>TODO(hw5)</code> functions. <code>${escapeHtml(error.message)}</code></p>`;
+    target.innerHTML = `<p class="empty-state">Recall unavailable: <code>${escapeHtml(error.message)}</code></p>`;
   }
 }
 
@@ -994,7 +994,7 @@ function runPipeline() {
     if (status) status.textContent = message;
     const target = document.getElementById("training-curve");
     if (target) {
-      target.innerHTML = `<p class="empty-state">Training failed — implement the <code>TODO(hw5)</code> functions, then press &ldquo;Train&rdquo;. <code>${escapeHtml(message)}</code></p>`;
+      target.innerHTML = `<p class="empty-state">Training failed. Check the error and try again: <code>${escapeHtml(message)}</code></p>`;
     }
   }
 }
@@ -1030,7 +1030,7 @@ function init() {
 
   const status = document.getElementById("status");
   if (status) {
-    status.textContent = `Dataset ready: ${movies.length.toLocaleString("en-US")} movies, ${trainSet.length.toLocaleString("en-US")} train ratings on ${tfBackend || "tf"}. Implement the TODO(hw5) functions, then press \u201cTrain\u201d.`;
+    status.textContent = `Dataset ready: ${movies.length.toLocaleString("en-US")} movies, ${trainSet.length.toLocaleString("en-US")} train ratings on ${tfBackend || "tf"}. Set L2 regularization to 0.0001, then press \u201cTrain\u201d.`;
   }
 }
 

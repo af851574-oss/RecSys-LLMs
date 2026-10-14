@@ -23,7 +23,7 @@ MovieLens 100K has 100,000 observed ratings in a user–movie matrix that is 93.
 **Contributions.**
 
 - Implemented TensorFlow.js factor training, validation-weight restoration, catalog Top-10 and strict training-candidate Recall@10 in the provided browser app.
-- Found a degenerate default setting, tuned one variable using validation, and corrected an impossible rank-11 test fixture without changing the dataset or page UI.
+- Found a degenerate default setting, tuned one variable using validation, and corrected an impossible rank-11 test fixture. Dataset and page structure stayed unchanged; I later replaced stale TODO instructions in the UI.
 
 ## 2. Related Work
 
