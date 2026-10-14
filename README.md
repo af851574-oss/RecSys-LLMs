@@ -86,3 +86,47 @@ node week4/analysis.mjs  # threshold sweep, final rule table, useful vs misleadi
 Both load the real `week4/transactions.js` and the real `week4/script.js` in a
 `node:vm` sandbox (no dependencies, no server); the page itself opens from
 `file://`.
+
+## Week 5 — Matrix Factorization with TensorFlow.js
+
+The six `TODO(hw5)` stubs in `week5/script.js` are implemented
+(`predictRating`, `initializeFactors`, `trainMF`, `selectBestCheckpoint`,
+`recommendTopK`, `recallAtK`). The starter's inconsistent rank-11 test fixture
+was also corrected to use 12 training-set movie candidates; all other
+scaffolding and dataset files are unchanged.
+The model is `mu + p_u . q_i` with 16-dimensional `tf.Variable` factors
+indexed by raw id (`[944, 16]` users, `[1683, 16]` movies); scalar rating
+predictions are clamped to [1, 5], while Top-10 ranking scores are raw and
+can exceed 5. Training is a shuffled mini-batch Adam loop built from
+`tf.gather` / element-wise ops / `tf.losses.meanSquaredError` plus an L2
+penalty, run on the WebGL backend in our browser (CPU fallback is available). While epochs run, the weights of the
+best-validation epoch are snapshotted and restored when training ends, so
+the page holds the selected checkpoint (the harness's "Run tests" reports
+11/11). Two TF.js pitfalls found and handled: `optimizer.minimize(f, false,
+varList)` returns `null` (the readme's chained `.dispose()` would throw),
+and `tf.variable(tf.randomNormal(...))` keeps the initializer tensor alive,
+which leaked 2 tensors per Train click until the creation was wrapped in
+`tf.tidy`.
+
+At the page defaults (epochs 20, lr 0.01, batch 64, **reg 0.05**) the
+per-batch L2 over the full matrices crushes the factors to ~0 and the model
+degenerates to the mean predictor (test RMSE 1.2289 = baseline). Lowering
+`reg` — the one tuned variable, selected on validation only — to **0.0001**
+gave best val RMSE **0.9959** (epoch 14) and test RMSE **1.0472** vs the
+training-mean baseline **1.2289** on the second post-fix Train click
+(the same model generated the lists and Recall below; results vary with random initialization). Top-10 lists exclude everything
+the user rated in train/validation (verified 0 overlap for users 1 and 405);
+Recall@10 with ranking restricted to the **1,611 training-set movies** was
+**0.0554** (macro average over 861 evaluable users; 326 hits among 5,142
+relevant candidates), with 13 unseen relevant test ids and 82 users without
+a relevant candidate reported as exclusions. The UI Top-10 button ranks
+the full catalog; only evaluation restricts candidate movies to the train pool.
+
+- Live app: https://af851574-oss.github.io/RecSys-LLMs/week5/
+- Prompt journal: [`week5/prompt.md`](week5/prompt.md)
+
+Run the checks: serve the folder (`python3 -m http.server`) and open
+`week5/index.html` — press **Run tests** (11/11), set **L2 regularization
+to 0.0001** (the untouched starter default 0.05 collapses to the baseline),
+then **Train**, **Recommend Top-10**, **Evaluate Recall@10** (~103–106 s for
+20 epochs on the measured WebGL backend; first load needs the TensorFlow.js CDN).
