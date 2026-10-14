@@ -74,11 +74,15 @@ User 405's train/validation ratings average **1.921** across 662 films, with man
 
 ## 6. AI Usage Disclosure
 
-**Tools.** Pi Coding Agent **0.85.1**, with a separate task-only implementation subagent using **GLM-5.3 via Z.ai**. It generated code, performed TensorFlow.js API checks, ran Node and headless-Chrome experiments, and maintained `week5/prompt.md`; an AI-assisted review pass independently checked the raw-data counts, source logic, reference records and the 3/19 example, then corrected the repeated-Train and candidate-pool issues. AI assistance also helped draft this report and the demo script.
+**AI tools used.** Pi Coding Agent 0.85.1; the task-only implementation session ran on GLM-5.3 through Z.ai.
 
-**Verification and limits.** The checks in Sections 4–5 were executed, not inferred from a language-model description; browser logs and small runnable checks underpin their numbers. These were **AI-assisted independent checks**, not a claim of unaided human calculation. I did not independently verify TensorFlow.js kernel internals or claim that headless WebGL timings predict every viewer's machine. The original implementation session completed; a resumed verification session later ended with a tooling failure while updating README, after its post-fix browser logs and journal had already been saved. The reported results come from that successful saved evidence, not from a claimed successful exit of the resumed session.
+**How I used AI.** I directed a coding agent to inspect the starter, implement and test the factor model, and record the five-loop investigation. I also used AI to review the result and draft the report.
 
-**Session artifact.** `argrishkina_a05_session.json` is a **privacy-redacted derived audit** from the task-only worker session, containing actual tool calls, file-change descriptions and verified milestones while excluding conversation, credentials and local account identifiers. It is **not an unmodified Pi export**. The homework guidelines request an unmodified tool-native export; this privacy choice may not meet that rule, and the report does not claim otherwise.
+**What I verified myself.** With separate AI-assisted checks, I recalculated the data split and baseline RMSE, checked user 1's three held-out hits out of 19 eligible movies, reran the Node tests, checked the published page in Chrome, verified the references, and inspected the PDF.
+
+**What I trusted without verification.** I did not independently reimplement TensorFlow.js kernels or check the dataset against its original release.
+
+**Session log.** The attached `argrishkina_a05_session.json` is a privacy-redacted audit generated from the task-only implementation session and its follow-up. It contains real tool calls with sanitized arguments, file changes, and milestones, but excludes conversational content and replaces local account identifiers. The original Pi session was not edited; the attached audit is not an unmodified Pi export. The prompts and notes are in `week5/prompt.md`.
 
 ## References
 

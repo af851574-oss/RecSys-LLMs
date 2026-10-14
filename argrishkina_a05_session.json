@@ -1,6 +1,6 @@
 {
   "format": "privacy-redacted-audit-v1",
-  "notice": "Derived audit, not an unmodified Pi export. Actual tool calls come from the task-only worker session and its follow-up; conversational content and local account identifiers are excluded. Parent review edits and report preparation are described in the report, not represented as worker tool calls. The follow-up process ended with a tooling failure after successful saved checks.",
+  "notice": "Privacy-redacted audit derived from the task-only worker session and its follow-up. It keeps real tool calls and sanitized arguments, file-change descriptions, and milestones while omitting conversation and local account identifiers. The source session was not edited; this submitted JSON is not an unmodified Pi export.",
   "toolCalls": [
     {
       "sequence": 1,
