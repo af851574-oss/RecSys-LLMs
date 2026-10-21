@@ -1071,10 +1071,11 @@ function mfScores(userId) {
 }
 
 // ---------------------------------------------------------------------------
-// Student stubs (TODO(hw6))
+// Student stubs (TODO(hw6)) - now implemented
 //
-// Each stub below throws until you implement it. Keep the signature, fill in the
-// body, and update the JSDoc contract notes if your design differs.
+// The three functions below are implemented against the documented contracts
+// above each one (buildGraph / rowNormalize / pageRank / personalizedPageRank
+// live in graph.js).
 //
 // Provided helpers you will want:
 //   `HW6_STATE.candidateIds`  ascending training-movie ids (the candidate pool)
@@ -1088,7 +1089,7 @@ function mfScores(userId) {
 /**
  * Extract movie-node scores from a full propagation vector.
  *
- * TODO(hw6): implement this. Readme section 5 requires movie-node scores only.
+ * Implemented: movie-node entries of `p` only, in `graph.movieIds` order.
  *
  * Contract:
  *  - `p` is the node-probability vector produced by `pageRank` /
@@ -1102,29 +1103,43 @@ function mfScores(userId) {
  *    `p[userNodeCount + k]`.
  *  - Never add a padding node: the output length is exactly
  *    `graph.movieIds.length`.
- *  - Throw the `TODO(hw6)` error until implemented; do not return zeros, because
- *    a silent zero vector makes every downstream metric look valid when it is not.
+ *  - Implemented; it no longer throws (a silent zero vector would make every
+ *    downstream metric look valid when it is not, so a missing vector is an
+ *    error, and a non-finite node entry is reported as 0, never as a score).
  *
  * @param {ArrayLike<number>} p Node probabilities, indexed by graph node index.
  * @param {Object} graph        Graph object from `graph.js`.
  * @returns {Float64Array} Movie scores in `graph.movieIds` order.
  */
 function movieScores(p, graph) {
-  // TODO(hw6): select the movie-node entries of `p`, in `graph.movieIds` order.
-  throw new Error("TODO(hw6): movieScores is not implemented yet.");
+  if (!p || typeof p.length !== "number") {
+    throw new Error("movieScores: expected a node-probability vector, got " + typeof p);
+  }
+  const ids = Array.isArray(graph && graph.movieIds) ? graph.movieIds : [];
+  const out = new Float64Array(ids.length);
+  if (!ids.length) return out;
+  // Node order is users first, then movies (no padding node), so entry k is the
+  // node index (number of user nodes) + k.
+  const offset = Array.isArray(graph.userIds) ? graph.userIds.length : Number(graph.nUsers) || 0;
+  for (let k = 0; k < ids.length; k++) {
+    const value = Number(p[offset + k]);
+    out[k] = Number.isFinite(value) ? value : 0;
+  }
+  return out;
 }
 
 /**
  * Recommend the top-K movies for a user with one of the four methods.
  *
- * TODO(hw6): implement this. Readme section 5 defines the rules.
+ * Implemented per readme section 5, using the provided helpers listed above.
  *
  * Contract:
  *  - `method` is one of `"popularity"`, `"pagerank"`, `"ppr"`, `"mf"`.
- *    `"pagerank"` and `"ppr"` must use the alpha currently selected in the
- *    `#alpha` slider and the cached propagation results returned by
- *    `hw6RunPageRank` / `hw6RunPPR` (or `pageRank` / `personalizedPageRank`
- *    directly through the adapter). Do not re-run a sweep here.
+ *    Implemented: `"pagerank"` / `"ppr"` use the alpha currently selected in
+ *    the `#alpha` slider and the cached propagation results returned by
+ *    `hw6RunPageRank` / `hw6RunPPR` through `hw6ScoreVector`; no sweep is re-run
+ *    here. An untrained MF reference returns `[]` rather than a list of
+ *    meaningless `-Infinity` scores.
  *  - Candidate pool: every movie observed in the training split, i.e.
  *    `HW6_STATE.candidateIds`. Movies outside it can never be recommended.
  *  - Exclusion: for `split === "test"` drop movies the user rated in training or
@@ -1148,14 +1163,57 @@ function movieScores(p, graph) {
  * @returns {RecommendedMovie[]}
  */
 function recommendTopK(method, userId, K, split) {
-  // TODO(hw6): filter the candidate pool, sort by score desc / id asc, slice to K.
-  throw new Error("TODO(hw6): recommendTopK is not implemented yet.");
+  const name = split === "val" ? "val" : "test";
+  const k = K === undefined ? HW6_K : Math.floor(Number(K));
+  if (method !== "popularity" && method !== "pagerank" && method !== "ppr" && method !== "mf") return [];
+  if (!Number.isFinite(k) || k <= 0) return [];
+  const uid = Math.round(Number(userId));
+  if (!Number.isFinite(uid)) return [];
+  if (!HW6_STATE.splitReady) return [];
+  const ids = HW6_STATE.candidateIds;
+  if (!ids.length) return [];
+
+  // Candidate scores aligned to the training pool. MF needs a trained model;
+  // without one there is nothing honest to rank, so no list is returned.
+  let vector = null;
+  if (method === "mf") {
+    if (!HW6_MF_MODEL || MF_INFO.trainedAt === null) return [];
+    vector = hw6ScoreVector(method, uid, hw6ReadAlpha(), name);
+  } else if (method !== "popularity") {
+    vector = hw6ScoreVector(method, uid, hw6ReadAlpha(), name);
+  }
+
+  const excluded = hw6ExclusionSet(name, uid);
+  const scored = [];
+  for (let i = 0; i < ids.length; i++) {
+    const movieId = ids[i];
+    if (excluded.has(movieId)) continue; // this split's previously-rated rule
+    const score = vector === null ? hw6PopularityOf(movieId) : Number(vector.scores[i]);
+    if (!Number.isFinite(score)) continue; // unscoreable candidates never enter a list
+    scored.push({ movieId: movieId, score: score });
+  }
+  if (!scored.length) return [];
+
+  // Score descending, ties broken by ascending raw movie id (readme section 5).
+  scored.sort(function (a, b) { return b.score - a.score || a.movieId - b.movieId; });
+
+  const top = scored.slice(0, k);
+  return top.map(function (item) {
+    return {
+      movieId: item.movieId,
+      title: hw6Title(item.movieId),
+      genres: hw6Genres(item.movieId),
+      score: item.score,
+      popularity: hw6PopularityOf(item.movieId),
+    };
+  });
 }
 
 /**
  * Recall@K for one method over the shared evaluation cohort.
  *
- * TODO(hw6): implement this. Readme sections 7.1 and 7.2 define the protocol.
+ * Implemented per readme sections 7.1 and 7.2, on `hw6SharedCohort(split)` so
+ * every method reports the exact same users.
  *
  * Contract:
  *  - Cohort: use `hw6SharedCohort(split)` so all four methods report the exact
@@ -1181,8 +1239,44 @@ function recommendTopK(method, userId, K, split) {
  * @returns {RecallReport}
  */
 function recallAtK(method, K, split) {
-  // TODO(hw6): macro-average Recall@K over the shared cohort, with exclusions.
-  throw new Error("TODO(hw6): recallAtK is not implemented yet.");
+  const name = split === "val" ? "val" : "test";
+  const k = K === undefined ? HW6_K : Math.floor(Number(K));
+  const cohort = hw6SharedCohort(name);
+  const perUser = [];
+  let recallSum = 0;
+
+  for (let i = 0; i < cohort.length; i++) {
+    const userId = cohort[i];
+    const relevant = new Set();
+    const grades = HW6_STATE.gradesBySplit[name].get(userId) || new Map();
+    const excluded = hw6ExclusionSet(name, userId);
+    grades.forEach(function (rating, movieId) {
+      if (rating >= 4.0 && HW6_STATE.candidateSet.has(movieId) && !excluded.has(movieId)) {
+        relevant.add(movieId);
+      }
+    });
+    // Cohort membership already guarantees relevant.size > 0; guard anyway so
+    // the macro average can never divide by zero.
+    if (relevant.size === 0) continue;
+    const recs = recommendTopK(method, userId, k, name);
+    let hit = 0;
+    for (let r = 0; r < recs.length; r++) {
+      if (relevant.has(recs[r].movieId)) hit++;
+    }
+    recallSum += hit / relevant.size;
+    perUser.push({ userId: userId, relevant: relevant.size, hit: hit });
+  }
+
+  // The exclusion counts come from the provided accounting, so the panel, the
+  // comparison table and results.csv all quote one definition.
+  const exclusions = HW6_STATE.splitReady ? hw6CohortExclusions(name) : null;
+  return {
+    recall: cohort.length ? recallSum / cohort.length : 0,
+    cohort: cohort,
+    excludedUnseen: exclusions ? exclusions.excludedUnseen : 0,
+    excludedNoEligible: exclusions ? exclusions.excludedNoEligible : 0,
+    perUser: perUser,
+  };
 }
 
 // ---------------------------------------------------------------------------

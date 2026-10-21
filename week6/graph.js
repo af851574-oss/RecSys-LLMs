@@ -333,7 +333,8 @@ function getGraph() {
 /**
  * Build the bipartite user-movie graph from the TRAINING split.
  *
- * TODO(hw6): implement this. Rules (readme.md section 3.1):
+ * Implemented per readme.md section 3.1: rules (node universe, index order,
+ * positive-only edges):
  *  - The node universe is the set of user ids and movie ids observed in
  *    `train` ONLY. Map ids to contiguous indices explicitly; never add a
  *    padding node (no index-0 "dummy" row).
@@ -354,32 +355,98 @@ function getGraph() {
  * @returns {Graph}
  */
 function buildGraph(train) {
-  // TODO(hw6): collect observed ids, map them to contiguous indices, fill R and
-  // degree, then return the object described in the typedef and readme 3.1.
-  throw new Error("TODO(hw6): buildGraph is not implemented yet.");
+  const rows = Array.isArray(train) ? train : [];
+
+  // 1. Node universe: user ids and movie ids OBSERVED in the training split
+  // (any rating value), mapped explicitly to contiguous local indices.
+  const userSet = new Set();
+  const movieSet = new Set();
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row) continue;
+    const u = Number(row.userId);
+    const m = Number(row.movieId);
+    if (Number.isFinite(u)) userSet.add(u);
+    if (Number.isFinite(m)) movieSet.add(m);
+  }
+  const userIds = Array.from(userSet).sort(function (a, b) { return a - b; });
+  const movieIds = Array.from(movieSet).sort(function (a, b) { return a - b; });
+  const userIndexOf = new Map();
+  for (let u = 0; u < userIds.length; u++) userIndexOf.set(userIds[u], u);
+  const movieIndexOf = new Map();
+  for (let i = 0; i < movieIds.length; i++) movieIndexOf.set(movieIds[i], i);
+
+  const nUsers = userIds.length;
+  const nMovies = movieIds.length;
+  const nodeCount = nUsers + nMovies; // users then movies, no padding node
+
+  // 2. Positive training edges only: R[u][i] = 1 iff rating >= 4.0 in TRAIN.
+  const R = new Array(nUsers);
+  for (let u = 0; u < nUsers; u++) R[u] = new Array(nMovies).fill(0);
+  const degree = new Float64Array(nodeCount);
+  let positiveEdges = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || !(Number(row.rating) >= 4.0)) continue; // NaN rating = no edge
+    const u = userIndexOf.get(Number(row.userId));
+    const m = movieIndexOf.get(Number(row.movieId));
+    if (u === undefined || m === undefined) continue;
+    if (R[u][m]) continue; // duplicate record guard: an edge is binary
+    R[u][m] = 1;
+    degree[u] += 1;
+    degree[nUsers + m] += 1;
+    positiveEdges += 1;
+  }
+
+  // 3. Zero-degree nodes (observed in training, no positive training edge).
+  const zeroDegreeUsers = [];
+  for (let u = 0; u < nUsers; u++) if (degree[u] === 0) zeroDegreeUsers.push(userIds[u]);
+  const zeroDegreeMovies = [];
+  for (let m = 0; m < nMovies; m++) if (degree[nUsers + m] === 0) zeroDegreeMovies.push(movieIds[m]);
+
+  return {
+    nUsers: nUsers,
+    nMovies: nMovies,
+    userIds: userIds,
+    movieIds: movieIds,
+    userIndexOf: userIndexOf,
+    movieIndexOf: movieIndexOf,
+    nodeCount: nodeCount,
+    nodeOfUser: function (userId) {
+      const local = userIndexOf.get(Number(userId));
+      return local === undefined ? -1 : local;
+    },
+    movieOfNode: function (node) {
+      const local = Number(node) - nUsers;
+      return local >= 0 && local < nMovies ? movieIds[local] : -1;
+    },
+    isUserNode: function (node) {
+      return Number(node) >= 0 && Number(node) < nUsers;
+    },
+    degree: degree,
+    zeroDegreeUsers: zeroDegreeUsers,
+    zeroDegreeMovies: zeroDegreeMovies,
+    positiveEdges: positiveEdges,
+    R: R,
+  };
 }
 
 /**
  * Row-normalize the transition matrix and record the zero-degree nodes.
  *
- * TODO(hw6): for each positive-degree node, divide its row by its degree so the
- * row sums to 1; leave zero-degree rows all-zero and mark them in
- * `danglingMask`. The dangling mass must be handled in the update exactly as in
- * readme.md section 3.3:
+ * Implemented: each positive-degree row is divided by its degree (row sums to
+ * 1), zero-degree rows stay all-zero and are flagged in `danglingMask`. The
+ * dangling mass itself is applied later, inside the propagation update, exactly
+ * as in readme.md section 3.3:
  *
  *   p_next = alpha * (Q^T * p + d * v) + (1 - alpha) * v
  *
  * where d is the probability mass currently sitting on zero-degree nodes.
  *
- * INTENDED TENSORFLOW.JS USE (readme.md section 3.5): this helper returns plain
- * JavaScript arrays so it can be inspected and tested, but the student
- * implementation should lift them into tensors for the batched propagation:
- * build the full transition from the two off-diagonal blocks (R row-normalized
- * by user degree and R-transpose row-normalized by movie degree) so the square
- * adjacency matrix is never materialized, and use `tf.tensor2d(Q)`,
- * `tf.transpose`, `tf.matMul`, and a `danglingMask`-derived correction for the
- * dangling term. Q and danglingMask are deliberately plain so tests can verify
- * row sums and the mask without a backend.
+ * TensorFlow.js note (readme.md section 3.5): this helper returns plain arrays
+ * so row sums and the mask can be verified without a backend. The batched
+ * propagation never materializes this square matrix for MovieLens; it uses the
+ * two off-diagonal blocks built by `graphTransitionTensors` below.
  *
  * Assumptions: `graph` comes from `buildGraph` (node order users then movies).
  * Failure cases: a null/missing graph returns { Q: [], danglingMask: [] }.
@@ -388,16 +455,51 @@ function buildGraph(train) {
  * @returns {RowNormalized}
  */
 function rowNormalize(graph) {
-  // TODO(hw6): normalize positive-degree rows and build the dangling mask.
-  throw new Error("TODO(hw6): rowNormalize is not implemented yet.");
+  if (!graph || !Array.isArray(graph.R) || !graph.R.length) return { Q: [], danglingMask: [] };
+  const R = graph.R;
+  const nUsers = R.length;
+  const nMovies = Array.isArray(R[0]) ? R[0].length : 0;
+  const n = nUsers + nMovies;
+
+  const Q = new Array(n);
+  const danglingMask = new Array(n);
+  for (let i = 0; i < n; i++) Q[i] = new Array(n).fill(0);
+
+  // User rows: neighbours are the movies with R[u][i] = 1.
+  for (let u = 0; u < nUsers; u++) {
+    let d = 0;
+    for (let i = 0; i < nMovies; i++) if (R[u][i]) d++;
+    if (d > 0) {
+      const w = 1 / d;
+      for (let i = 0; i < nMovies; i++) if (R[u][i]) Q[u][nUsers + i] = w;
+      danglingMask[u] = false;
+    } else {
+      danglingMask[u] = true; // zero-degree row stays all zero
+    }
+  }
+
+  // Movie rows: neighbours are the users with R[u][i] = 1 (both directions).
+  for (let i = 0; i < nMovies; i++) {
+    const node = nUsers + i;
+    let d = 0;
+    for (let u = 0; u < nUsers; u++) if (R[u][i]) d++;
+    if (d > 0) {
+      const w = 1 / d;
+      for (let u = 0; u < nUsers; u++) if (R[u][i]) Q[node][u] = w;
+      danglingMask[node] = false;
+    } else {
+      danglingMask[node] = true;
+    }
+  }
+
+  return { Q: Q, danglingMask: danglingMask };
 }
 
 /**
  * Global PageRank with a uniform restart distribution.
  *
- * TODO(hw6): implement the power iteration with a uniform restart vector v
- * (readme.md sections 3.2-3.4), using TensorFlow.js for the batched
- * propagation:
+ * Implemented power iteration with a uniform restart vector v (readme.md
+ * sections 3.2-3.4) on TensorFlow.js tensor operations:
  *
  *   p_0 = v ;  p_next = alpha * (Q^T * p + d * v) + (1 - alpha) * v
  *
@@ -438,16 +540,29 @@ function rowNormalize(graph) {
  * @throws {Error} when neither `opts.transition` nor the global `GRAPH` exists.
  */
 function pageRank(alpha, opts) {
-  // TODO(hw6): power iteration with a uniform restart on the tensor path.
-  throw new Error("TODO(hw6): pageRank is not implemented yet.");
+  const options = opts || {};
+  const tol = Number.isFinite(Number(options.tol)) ? Number(options.tol) : 1e-6;
+  const maxIter = Number.isFinite(Number(options.maxIter)) ? Number(options.maxIter) : 500;
+  graphCheckAlpha(alpha);
+
+  const tensors = options.transition
+    ? graphSquareTensors(options.transition)
+    : graphActiveTransitionTensors();
+  const n = tensors.n;
+  const restart = graphUniformRestart(n);
+  try {
+    return graphPropagate(alpha, restart, tensors, tol, maxIter);
+  } finally {
+    if (options.transition) graphDisposeTensors(tensors);
+  }
 }
 
 /**
  * Personalized PageRank with a one-hot restart at one user's node.
  *
- * TODO(hw6): identical to `pageRank` except the restart vector v is one-hot at
- * one node. It accepts the same `opts.transition` override, the same stopping
- * rule, the same zero-degree policy and the same return shape
+ * Implemented identically to `pageRank` except that the restart vector v is
+ * one-hot at one node. It accepts the same `opts.transition` override, the same
+ * stopping rule, the same zero-degree policy and the same return shape
  * `{p, iterations, residual, converged}`.
  *
  * RESTART INDEX (node index, not a raw user id): the first argument is a node
@@ -475,8 +590,326 @@ function pageRank(alpha, opts) {
  *   neither `opts.transition` nor the global `GRAPH` exists.
  */
 function personalizedPageRank(userId, alpha, opts) {
-  // TODO(hw6): one-hot restart at the user's node; fail loudly on unknown users.
-  throw new Error("TODO(hw6): personalizedPageRank is not implemented yet.");
+  const options = opts || {};
+  const tol = Number.isFinite(Number(options.tol)) ? Number(options.tol) : 1e-6;
+  const maxIter = Number.isFinite(Number(options.maxIter)) ? Number(options.maxIter) : 500;
+  graphCheckAlpha(alpha);
+
+  let tensors;
+  let restartNode;
+  if (options.transition) {
+    // Fixture / caller-supplied square transition: the argument is a node index
+    // in Q's own order.
+    tensors = graphSquareTensors(options.transition);
+    restartNode = Math.round(Number(userId));
+    if (!(restartNode >= 0 && restartNode < tensors.n)) {
+      graphDisposeTensors(tensors);
+      throw new Error(
+        "personalizedPageRank: restart index " + userId + " is outside [0, " + tensors.n + ") for the supplied transition",
+      );
+    }
+  } else {
+    tensors = graphActiveTransitionTensors();
+    restartNode = graphRestartNode(tensors.graph, userId);
+  }
+
+  const restart = graphOneHotRestart(tensors.n, restartNode);
+  try {
+    return graphPropagate(alpha, restart, tensors, tol, maxIter);
+  } finally {
+    if (options.transition) graphDisposeTensors(tensors);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Propagation core (private, TensorFlow.js)
+//
+// The square adjacency matrix A = [[0, R], [R^T, 0]] is NEVER materialized for
+// MovieLens (2390 x 2390 dense would be ~23 MB per copy and useless work).
+// Instead the two off-diagonal blocks are lifted once into two dense tensors:
+//   Ru [nUsers x nMovies] = R with each user row divided by that user's degree
+//   Rm [nMovies x nUsers] = R^T with each movie row divided by that movie's degree
+// so one update collects incoming mass at each destination with two transposed
+// matmuls (readme 3.2: P^T collects incoming probability; it does not reverse the
+// graph's movement rules):
+//   (P^T p)[users]  = Rm^T * p_movies
+//   (P^T p)[movies] = Ru^T * p_users
+// plus the dangling-mass correction from readme.md section 3.3.
+// ---------------------------------------------------------------------------
+
+/**
+ * Cached transition tensors for the ACTIVE graph (single slot). Rebuilt when a
+ * different graph object becomes active; the previous entry is disposed, so
+ * repeated PageRank / PPR runs on the same graph allocate nothing and repeated
+ * graph builds do not accumulate tensors.
+ *
+ * @type {{graph: Object, n: number, nUsers: number, nMovies: number,
+ *         Ru: tf.Tensor2D, Rm: tf.Tensor2D, dangling: tf.Tensor2D}|null}
+ */
+let GRAPH_TRANSITION_TENSORS = null;
+
+/**
+ * Throw a readable error for an alpha outside [0, 1].
+ *
+ * @param {number} alpha
+ * @returns {void}
+ */
+function graphCheckAlpha(alpha) {
+  const a = Number(alpha);
+  if (!Number.isFinite(a) || a < 0 || a > 1) {
+    throw new Error("alpha must be a link-following probability in [0, 1], got " + alpha);
+  }
+}
+
+/**
+ * Dispose a transition-tensor bundle. Tolerates a null / partial bundle.
+ *
+ * @param {Object|null} tensors
+ * @returns {void}
+ */
+function graphDisposeTensors(tensors) {
+  if (!tensors) return;
+  const keys = ["Ru", "Rm", "dangling", "Qt"];
+  for (let i = 0; i < keys.length; i++) {
+    const tensor = tensors[keys[i]];
+    if (tensor && typeof tensor.dispose === "function") {
+      try {
+        tensor.dispose();
+      } catch (error) {
+        // Best-effort: disposal must never mask the caller's own error.
+      }
+    }
+  }
+}
+
+/**
+ * Transition tensors for the ACTIVE graph, building (and caching) them on first
+ * use. Node order is exactly `buildGraph`'s (users then movies).
+ *
+ * @returns {{graph: Object, n: number, nUsers: number, nMovies: number,
+ *            Ru: tf.Tensor2D, Rm: tf.Tensor2D, dangling: tf.Tensor2D}}
+ * @throws {Error} when TensorFlow.js is unavailable or no graph is active.
+ */
+function graphActiveTransitionTensors() {
+  const graph = typeof getGraph === "function" ? getGraph() : GRAPH;
+  if (!graph || !Array.isArray(graph.R) || !graph.R.length) {
+    throw new Error(
+      "no graph is active: build the graph from the training split first (opts.transition is absent)",
+    );
+  }
+  if (GRAPH_TRANSITION_TENSORS && GRAPH_TRANSITION_TENSORS.graph === graph) {
+    return GRAPH_TRANSITION_TENSORS;
+  }
+  if (typeof tf === "undefined") {
+    throw new Error("TensorFlow.js (global `tf`) is not available on this page");
+  }
+
+  graphDisposeTensors(GRAPH_TRANSITION_TENSORS);
+  GRAPH_TRANSITION_TENSORS = null;
+
+  const R = graph.R;
+  const nUsers = R.length;
+  const nMovies = Array.isArray(R[0]) ? R[0].length : 0;
+  const n = nUsers + nMovies;
+  const ru = new Float32Array(nUsers * nMovies);
+  const rm = new Float32Array(nMovies * nUsers);
+  const userDeg = new Int32Array(nUsers);
+  const movieDeg = new Int32Array(nMovies);
+  for (let u = 0; u < nUsers; u++) {
+    const row = R[u];
+    for (let i = 0; i < nMovies; i++) {
+      if (!row[i]) continue;
+      userDeg[u]++;
+      movieDeg[i]++;
+    }
+  }
+  const dangling = new Float32Array(n);
+  for (let u = 0; u < nUsers; u++) {
+    if (userDeg[u] === 0) {
+      dangling[u] = 1; // zero-degree user node
+    } else {
+      const w = 1 / userDeg[u];
+      for (let i = 0; i < nMovies; i++) if (R[u][i]) ru[u * nMovies + i] = w;
+    }
+  }
+  for (let i = 0; i < nMovies; i++) {
+    if (movieDeg[i] === 0) {
+      dangling[nUsers + i] = 1; // zero-degree movie node
+    } else {
+      const w = 1 / movieDeg[i];
+      for (let u = 0; u < nUsers; u++) if (R[u][i]) rm[i * nUsers + u] = w;
+    }
+  }
+
+  GRAPH_TRANSITION_TENSORS = {
+    graph: graph,
+    n: n,
+    nUsers: nUsers,
+    nMovies: nMovies,
+    Ru: tf.tensor2d(ru, [nUsers, nMovies]),
+    Rm: tf.tensor2d(rm, [nMovies, nUsers]),
+    dangling: tf.tensor2d(dangling, [n, 1]),
+  };
+  return GRAPH_TRANSITION_TENSORS;
+}
+
+/**
+ * Transition tensors for a caller-supplied SQUARE transition (the
+ * `opts.transition` fixture path). The caller owns and must dispose them
+ * (`graphDisposeTensors`); nothing is cached here.
+ *
+ * @param {TransitionSpec} spec
+ * @returns {{n: number, Qt: tf.Tensor2D, dangling: tf.Tensor2D}}
+ * @throws {Error} when the spec is not a usable square matrix.
+ */
+function graphSquareTensors(spec) {
+  if (typeof tf === "undefined") {
+    throw new Error("TensorFlow.js (global `tf`) is not available on this page");
+  }
+  if (!spec || !Array.isArray(spec.Q) || !spec.Q.length) {
+    throw new Error("opts.transition must provide a square, already-normalized Q");
+  }
+  const n = spec.Q.length;
+  const dense = new Float32Array(n * n);
+  for (let i = 0; i < n; i++) {
+    const row = spec.Q[i];
+    if (!Array.isArray(row) || row.length !== n) {
+      throw new Error("opts.transition.Q must be square; row " + i + " is not");
+    }
+    for (let j = 0; j < n; j++) dense[i * n + j] = Number(row[j]) || 0;
+  }
+  const mask = spec.danglingMask;
+  const dangling = new Float32Array(n);
+  for (let i = 0; i < n; i++) if (mask && mask[i]) dangling[i] = 1;
+  return {
+    n: n,
+    Qt: tf.tensor2d(dense, [n, n]).transpose(), // Q^T collects incoming mass
+    dangling: tf.tensor2d(dangling, [n, 1]),
+  };
+}
+
+/**
+ * Uniform restart distribution over `n` nodes.
+ *
+ * @param {number} n
+ * @returns {Float64Array}
+ */
+function graphUniformRestart(n) {
+  const v = new Float64Array(n);
+  if (n > 0) v.fill(1 / n);
+  return v;
+}
+
+/**
+ * One-hot restart distribution at `node`.
+ *
+ * @param {number} n
+ * @param {number} node
+ * @returns {Float64Array}
+ */
+function graphOneHotRestart(n, node) {
+  const v = new Float64Array(n);
+  if (node >= 0 && node < n) v[node] = 1;
+  return v;
+}
+
+/**
+ * Resolve the restart argument to a node index on the ACTIVE graph.
+ *
+ * The page's adapter (`hw6RunPPR`) passes the RAW USER ID, while other callers
+ * use a node index, so both are accepted here and resolved unambiguously:
+ * a known raw user id wins (its node), otherwise the value is used as a node
+ * index when it is in range. Anything else is an error, never a silent uniform
+ * fallback.
+ *
+ * @param {Object} graph Active graph.
+ * @param {number|string} userId Raw user id or node index.
+ * @returns {number} Node index of the restart node.
+ * @throws {Error} when the argument names no user and is not a node index.
+ */
+function graphRestartNode(graph, userId) {
+  const value = Number(userId);
+  if (!Number.isFinite(value)) {
+    throw new Error("personalizedPageRank: restart node " + userId + " is not a number");
+  }
+  if (graph.userIndexOf instanceof Map && graph.userIndexOf.has(value)) {
+    return Number(graph.userIndexOf.get(value));
+  }
+  if (Number.isInteger(value) && value >= 0 && value < graph.nodeCount) {
+    return value;
+  }
+  throw new Error(
+    "personalizedPageRank: unknown restart user " + userId +
+    " (not a training user id and not a node index in [0, " + graph.nodeCount + "))",
+  );
+}
+
+/**
+ * The power iteration itself (readme.md sections 3.2-3.4), on tensors:
+ *
+ *   p_0 = v
+ *   p_next = alpha * (Q^T p + d * v) + (1 - alpha) * v
+ *          = alpha * Q^T p + (alpha * d + 1 - alpha) * v
+ *
+ * where `d` is the mass currently on zero-degree nodes (the same rule for
+ * global PageRank and PPR). Per iteration the walk part runs inside `tf.tidy`,
+ * the previous `p` tensor is disposed, and the L1 residual is read with
+ * `dataSync()` because the page's adapter consumes the result synchronously.
+ *
+ * @param {number} alpha
+ * @param {ArrayLike<number>} restart Restart distribution `v`.
+ * @param {Object} tensors From `graphActiveTransitionTensors` / `graphSquareTensors`.
+ * @param {number} tol Stop when the L1 change drops below this.
+ * @param {number} maxIter Iteration cap; reaching it is NOT convergence.
+ * @returns {PageRankResult}
+ */
+function graphPropagate(alpha, restart, tensors, tol, maxIter) {
+  const n = restart.length;
+  const column = new Float32Array(n);
+  for (let i = 0; i < n; i++) column[i] = restart[i];
+  const restartTensor = tf.tensor2d(column, [n, 1]); // long-lived, disposed below
+  let p = tf.tensor2d(column, [n, 1]); // p_0 = v
+  let iterations = 0;
+  let residual = Infinity;
+  let converged = false;
+
+  try {
+    while (iterations < maxIter) {
+      const next = tf.tidy(function () {
+        let walk;
+        if (tensors.Qt) {
+          walk = tf.matMul(tensors.Qt, p);
+        } else {
+          const pUsers = tf.slice(p, 0, [tensors.nUsers, 1]);
+          const pMovies = tf.slice(p, tensors.nUsers, [tensors.nMovies, 1]);
+          // Incoming mass at each destination (P^T, not P): user nodes receive
+          // from the movie->user block, movie nodes from the user->movie block.
+          const walkUsers = tf.matMul(tensors.Rm, pMovies, true); // Rm^T * p_movies
+          const walkMovies = tf.matMul(tensors.Ru, pUsers, true); // Ru^T * p_users
+          walk = tf.concat([walkUsers, walkMovies], 0);
+        }
+        const danglingMass = tf.sum(tf.mul(tensors.dangling, p)); // d
+        const restartWeight = danglingMass.mul(alpha).add(1 - alpha); // alpha*d + 1-alpha
+        return walk.mul(alpha).add(restartWeight.mul(restartTensor));
+      });
+      const l1 = tf.tidy(function () {
+        return tf.sum(tf.abs(next.sub(p))).dataSync()[0];
+      });
+      p.dispose();
+      p = next;
+      iterations++;
+      residual = l1;
+      if (l1 < tol) {
+        converged = true; // residual < tol before the cap
+        break;
+      }
+    }
+    const out = Float64Array.from(p.dataSync());
+    return { p: out, iterations: iterations, residual: residual, converged: converged };
+  } finally {
+    p.dispose();
+    restartTensor.dispose();
+  }
 }
 
 // ---------------------------------------------------------------------------

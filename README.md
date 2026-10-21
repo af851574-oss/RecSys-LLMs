@@ -131,3 +131,73 @@ Run the checks: serve the folder (`python3 -m http.server`) and open
 to 0.0001** (the untouched starter default 0.05 collapses to the baseline),
 then **Train**, **Recommend Top-10**, **Evaluate Recall@10** (~103–106 s for
 20 epochs on the measured WebGL backend; first load needs the TensorFlow.js CDN).
+
+## Week 6 — Graph-Based Recommendations with Personalized PageRank
+
+The seven `TODO(hw6)` stubs are implemented: in `week6/graph.js`
+`buildGraph`, `rowNormalize`, `pageRank`, `personalizedPageRank`; in
+`week6/script.js` `movieScores`, `recommendTopK`, `recallAtK`. Everything else
+(the split/popularity/cohort indices, the provided MF reference, the four-method
+comparison, the alpha sweep, the two-user demo, the 12-check harness and the
+exporters) is untouched starter code; `data.js`, `index.html`, `style.css`,
+`u.data`, `u.item`, `readme.md` and `vendor/` are byte-identical to upstream
+(the `TODO(hw5)` note above `splitByTimestamp` in `data.js` is a stale label
+over an already-implemented function).
+
+The graph is the bipartite user–movie graph over positive (≥ 4.0) training
+ratings: 943 user nodes + 1,611 movie nodes = 2,554 nodes, 45,602 positive
+edges, 1 zero-degree user (685) and 253 zero-degree movies, no padding node.
+Propagation is TensorFlow.js only: the square adjacency matrix is never built —
+one update is `(Pᵀp)[users] = Rmᵀ·p_movies` and `(Pᵀp)[movies] = Ruᵀ·p_users`
+(two `tf.matMul` calls on the 943×1611 off-diagonal blocks) plus the readme §3.3
+dangling-mass correction `alpha·(Pᵀp + d·v) + (1−alpha)·v`; `p` is disposed each
+iteration and the transition tensors are cached per active graph, so repeated
+runs do not accumulate tensors (7 → 7 tensors over three PPR runs in the
+browser, 5 → 5 over five runs in Node). One real bug was caught by the page's
+own orientation check: my first block update computed `P·p` instead of `Pᵀ·p`
+and returned the uniform vector after one iteration on a symmetric fixture;
+same harness is 12/12 after the transpose fix.
+
+Results (MovieLens 100k, chronological 79,619/9,596/10,785 split, shared test
+cohort of 861 users, 13 relevant test ratings outside the training pool and 82
+users without an eligible relevant movie reported as exclusions). Validation
+Recall@10 for PPR selected **alpha 0.50** (0.1145, vs 0.1048 at 0.70, 0.0900 at
+0.85, 0.0738 at 0.95; validation only, cohort 846). On test at the selected
+alpha: popularity **0.0760**, global PageRank **0.0797** (19 iterations, L1
+5.5e-7, converged), **PPR 0.1122** (22 iterations, L1 5.0e-7, converged), and
+the provided MF reference **0.0211** — with the important caveat that the
+starter's MF is degenerate under its fixed `reg 0.05` (constant 1.1052/1.1830
+RMSE for all 30 epochs, checkpoint epoch 1, every score equal to the global
+mean 3.5806), so that row is a broken baseline, not evidence that PPR beats
+matrix factorization. Mean recommended-list training popularity drops from 272
+(popularity) to 244 (PPR), and the one-factor-at-a-time demo (users 1 and 2)
+shows 0/10 shared movies when only the restart user changes but 7/10 when only
+alpha changes 0.85 → 0.50, with the lower-alpha list swapping in lower-
+popularity titles (Trainspotting 164, Sense and Sensibility 178, E.T. 167 for
+Scream 226, Air Force One 235, Titanic 219).
+
+- Prompt journal: [`week6/prompt.md`](week6/prompt.md)
+- Deliverables: [`week6/verification.json`](week6/verification.json) (the
+  harness's own export, 12 pass / 0 fail / 0 pending),
+  [`week6/results.csv`](week6/results.csv) (retrieval metrics, cohort, exclusions,
+  selected settings) and [`week6/recommendations.csv`](week6/recommendations.csv)
+  (120 rows: both demo users × four methods × both alphas with ids, titles,
+  genres, scores and training popularity) — all three produced by the page's
+  export buttons in headless Chrome, not typed by hand.
+
+Run it: serve the folder and open `week6/index.html` over HTTP (the data layer
+uses `fetch`, so `file://` will not work):
+
+```bash
+cd week6
+python3 -m http.server 8000
+```
+
+Then press **Run tests** (12/12 after **Build graph**), **Run PageRank** /
+**Run PPR** for the convergence panel, **Run evaluation** for the four-method
+comparison and the alpha sweep (it trains the MF reference lazily first; the
+full evaluation took ~19 min at alpha 0.85 and ~14 min at alpha 0.50 on the
+measured WebGL backend, Chrome 155 / TensorFlow.js 4.22.0 / Node 24.10.0),
+**Run two-user demo**, **Recommend Top-10**, and the three **Export** buttons.
+Set the alpha slider to the selected 0.50 before re-running the evaluation so
+the primary comparison uses the validation-selected alpha.
