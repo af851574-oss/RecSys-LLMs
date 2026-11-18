@@ -201,3 +201,13 @@ measured WebGL backend, Chrome 155 / TensorFlow.js 4.22.0 / Node 24.10.0),
 **Run two-user demo**, **Recommend Top-10**, and the three **Export** buttons.
 Set the alpha slider to the selected 0.50 before re-running the evaluation so
 the primary comparison uses the validation-selected alpha.
+
+## Project (FAR-Trans) — Session 1
+
+Individual Session 1 study plan (Encoder track): LLM-written user profiles versus
+purchase-count profiles for content-based asset recommendation on sparse histories.
+`project/` is an unmodified copy of the course starter (dryjins/RecSys-LLMs@f685086);
+my additions live in [`project/far-trans/hw1/`](project/far-trans/hw1/):
+read-only analysis scripts (CSV profile, sparse-subgroup nDCG@10, record dump with
+as-of joins, hand-check of the metric, prompt audit, one-asset/repeat statistics)
+with reproduction commands in their README.
