@@ -211,3 +211,56 @@ my additions live in [`project/far-trans/hw1/`](project/far-trans/hw1/):
 read-only analysis scripts (CSV profile, sparse-subgroup nDCG@10, record dump with
 as-of joins, hand-check of the metric, prompt audit, one-asset/repeat statistics)
 with reproduction commands in their README.
+
+## Project (FAR-Trans) — Homework 2
+
+The Session 1 question, implemented and run: an LLM-written natural-language
+profile of a customer's past purchases as the TF-IDF query of the content
+matcher, versus the starter's purchase-count CBF, on the mandated 100-warm-user
+cohort (cutoff 2021-06-01, 30-day truth, 11 labelled users). Qwen/Qwen3-1.7B
+(pinned course revision, greedy, thinking off, CPU float32 — no GPU on this
+machine) writes each profile from exactly the facts the scorer sees: per-asset
+attribute sets and buy counts, no names, ISINs, dates or customer attributes.
+The profile text is vectorized under the asset corpus's smoothed-IDF TF-IDF
+statistics and ranked by cosine over the same 767-asset eligible universe as
+CBF; a deterministic template restating the same facts is the ablation, so the
+remaining gap is wording, not information. Results (nDCG@10, all 100 / the 11
+nonempty-truth users): popularity 0.0286 / 0.2599, latest buy 0.0277 / 0.2520,
+template 0.0272 / 0.2474, latest buy or sell 0.0271 / 0.2464, llm_profile
+0.0219 / 0.1993 (3 truncated enumerations exceeded the 160-token budget and
+fell back to the template; reported fallback-inclusive, valid-only n=97 is
+0.0226 / 0.2192), cbf 0.0201 / 0.1827. The user-side text change beats the
+count control, but the deterministic restatement beats the LLM wording: the
+model summarizes and drops subcategory/market tokens the template repeats
+mechanically, and in TF-IDF cosine term coverage is the whole signal. The
+sparse subgroup the question targets (63 of 100 users, only 1 labelled) cannot
+be measured on the demo cohort — all methods 0.0000 there, as in Session 1.
+All verification checks pass: hand-recomputed nDCG@10 to 1e-12 against truth
+re-derived from the raw CSVs, a zero-findings leakage audit over the 100
+exported prompts, fresh recomputation of stored rankings from the saved profile
+texts, and machine-checked protocol matching between the baseline and profile
+runs (users, 767 eligible assets, data hashes, cutoff).
+
+The experiment lives on branch
+[`hw2`](https://github.com/af851574-oss/RecSys-LLMs/tree/hw2) (experiment
+commit `b1b5ec8`): [`profile_encoder.py`](https://github.com/af851574-oss/RecSys-LLMs/blob/hw2/far-trans-llm/profile_encoder.py)
+built on the course LLM-baseline package (unmodified except a two-line patch —
+transformers 5.x renamed the `from_pretrained` dtype argument), its unit tests,
+and [`verify_hw2.py`](https://github.com/af851574-oss/RecSys-LLMs/blob/hw2/verify_hw2.py)
+for every check above. Run outputs are not committed, per the course guidance.
+
+- Report (4 pages): [`argrishkina_hw2_report.pdf`](https://github.com/af851574-oss/RecSys-LLMs/blob/hw2/argrishkina_hw2_report.pdf)
+- AI-session export, unmodified tool-native JSONL: [`argrishkina_hw2_session.json`](https://github.com/af851574-oss/RecSys-LLMs/blob/hw2/argrishkina_hw2_session.json)
+- Reproduction commands: the branch's [`README.md`](https://github.com/af851574-oss/RecSys-LLMs/blob/hw2/README.md)
+
+Run the checks (dataset from https://researchdata.gla.ac.uk/1658/ extracted to
+`../FAR-Trans`, model cached under `~/.cache/huggingface`):
+
+```bash
+py far-trans/starter.py run --data-dir ../FAR-Trans --output-dir outputs/baselines
+cd far-trans-llm && py -m unittest test_profile_encoder
+py profile_encoder.py --data-dir ../../FAR-Trans --output-dir ../outputs/profile_run \
+   --model Qwen/Qwen3-1.7B --revision 70d244cc86ccca08cf5af4e1e306ecf908b1ad5e \
+   --device cpu --on-invalid fallback
+cd .. && py verify_hw2.py
+```
