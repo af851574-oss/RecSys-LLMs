@@ -17,7 +17,12 @@ improve nDCG@10 over the starter's purchase-count CBF?
 - `verify_hw2.py` — personal verification: protocol match, hand-recomputed
   nDCG@10, prompt leakage audit, fresh-ranking reproduction, subgroup stats.
 - `report_hw2.html` / `argrishkina_hw2_report.pdf` — the report.
-- `argrishkina_hw2_session.json` — unmodified tool-native AI-session export.
+- `make_compact_session.py` — builds the derivative from the native export.
+- `argrishkina_hw2_session.json` — submission export (documented derivative:
+  base64 image attachments and thinking blocks omitted for the channel size
+  limit; all prompts, tool calls and results preserved verbatim).
+- `argrishkina_hw2_session_native.jsonl` — the unmodified tool-native JSONL
+  (sha256 45fe4078e9c8b2e5…) that the derivative can be checked against.
 
 Run outputs (`outputs/`) are generated locally and not committed, per the
 course guidance. Model: Qwen/Qwen3-1.7B, revision
