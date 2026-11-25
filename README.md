@@ -18,9 +18,11 @@ improve nDCG@10 over the starter's purchase-count CBF?
   nDCG@10, prompt leakage audit, fresh-ranking reproduction, subgroup stats.
 - `report_hw2.html` / `argrishkina_hw2_report.pdf` — the report.
 - `make_compact_session.py` — builds the derivative from the native export.
-- `argrishkina_hw2_session.json` — submission export (documented derivative:
-  base64 image attachments and thinking blocks omitted for the channel size
-  limit; all prompts, tool calls and results preserved verbatim).
+- `argrishkina_hw2_session.json` — submission export: a single JSON document
+  (documented derivative — the channel rejected the native size): system
+  context, thinking and images omitted; event strings capped at 1200 chars
+  with markers; the byte-exact final state of every authored code file is
+  in the generated_code section; all 161 tool calls and 160 results kept.
 - `argrishkina_hw2_session_native.jsonl` — the unmodified tool-native JSONL
   (sha256 45fe4078e9c8b2e5…) that the derivative can be checked against.
 
